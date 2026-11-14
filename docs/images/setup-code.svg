@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 330" width="800" height="330" role="img" aria-labelledby="title desc">
+  <title id="title">How the 12-character code is used</title>
+  <desc id="desc">The TVCanvas app shows a 12-character code that you type into Home Assistant. Home Assistant sends the first 8 characters to TVCanvas Cloud to connect to your TVCanvas account. The last 4 characters never leave your home: they pair your phone with Home Assistant for photos.</desc>
+  <defs>
+    <marker id="arrow-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8250df"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#2da44e"/>
+    </marker>
+  </defs>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" text-anchor="middle">
+
+    <!-- The code, as the app shows it -->
+    <rect x="100" y="14" width="600" height="126" rx="14" fill="#ddf4ff" stroke="#0969da" stroke-width="2"/>
+    <text x="400" y="42" font-size="16" font-weight="600" fill="#0a3069">Code shown in the app, typed into Home Assistant</text>
+
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="22" font-weight="700">
+      <g fill="#fbefff" stroke="#8250df" stroke-width="1.5">
+        <rect x="131" y="56" width="36" height="46" rx="7"/>
+        <rect x="173" y="56" width="36" height="46" rx="7"/>
+        <rect x="215" y="56" width="36" height="46" rx="7"/>
+        <rect x="257" y="56" width="36" height="46" rx="7"/>
+        <rect x="319" y="56" width="36" height="46" rx="7"/>
+        <rect x="361" y="56" width="36" height="46" rx="7"/>
+        <rect x="403" y="56" width="36" height="46" rx="7"/>
+        <rect x="445" y="56" width="36" height="46" rx="7"/>
+      </g>
+      <g fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5">
+        <rect x="507" y="56" width="36" height="46" rx="7"/>
+        <rect x="549" y="56" width="36" height="46" rx="7"/>
+        <rect x="591" y="56" width="36" height="46" rx="7"/>
+        <rect x="633" y="56" width="36" height="46" rx="7"/>
+      </g>
+      <g fill="#3e1f79">
+        <text x="149" y="87">K</text>
+        <text x="191" y="87">7</text>
+        <text x="233" y="87">Q</text>
+        <text x="275" y="87">M</text>
+        <text x="337" y="87">2</text>
+        <text x="379" y="87">X</text>
+        <text x="421" y="87">R</text>
+        <text x="463" y="87">A</text>
+      </g>
+      <g fill="#116329">
+        <text x="525" y="87">P</text>
+        <text x="567" y="87">4</text>
+        <text x="609" y="87">N</text>
+        <text x="651" y="87">B</text>
+      </g>
+      <g fill="#0a3069">
+        <text x="306" y="86">-</text>
+        <text x="494" y="86">-</text>
+      </g>
+    </g>
+
+    <!-- Brackets under each part -->
+    <path d="M131,110 V118 H481 V110" fill="none" stroke="#8250df" stroke-width="2.5"/>
+    <path d="M507,110 V118 H669 V110" fill="none" stroke="#2da44e" stroke-width="2.5"/>
+
+    <!-- Arrows -->
+    <path d="M306,118 V182" fill="none" stroke="#8250df" stroke-width="3" marker-end="url(#arrow-purple)"/>
+    <path d="M588,118 V182" fill="none" stroke="#2da44e" stroke-width="3" marker-end="url(#arrow-green)"/>
+
+    <!-- First 8: the cloud -->
+    <rect x="60" y="188" width="330" height="124" rx="14" fill="#fbefff" stroke="#8250df" stroke-width="2"/>
+    <text x="225" y="224" font-size="18" font-weight="600" fill="#3e1f79">First 8 go to TVCanvas Cloud</text>
+    <text x="225" y="252" font-size="14" fill="#3e1f79">They connect Home Assistant</text>
+    <text x="225" y="272" font-size="14" fill="#3e1f79">to your TVCanvas account.</text>
+
+    <!-- Last 4: stay at home -->
+    <rect x="410" y="188" width="330" height="124" rx="14" fill="#dafbe1" stroke="#2da44e" stroke-width="2"/>
+    <text x="575" y="224" font-size="18" font-weight="600" fill="#116329">Last 4 stay in your home</text>
+    <text x="575" y="252" font-size="14" fill="#116329">They pair your phone with Home</text>
+    <text x="575" y="272" font-size="14" fill="#116329">Assistant for photos over Wi-Fi.</text>
+    <text x="575" y="292" font-size="14" fill="#116329">The cloud never sees them.</text>
+  </g>
+</svg>

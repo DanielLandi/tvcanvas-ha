@@ -1,0 +1,16 @@
+{
+  "domain": "tvcanvas",
+  "name": "TVCanvas",
+  "after_dependencies": ["ssdp", "zeroconf"],
+  "codeowners": ["@DanielLandi"],
+  "config_flow": true,
+  "dependencies": ["http"],
+  "documentation": "https://github.com/DanielLandi/tvcanvas-ha",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/DanielLandi/tvcanvas-ha/issues",
+  "loggers": ["samsungtvws", "pychromecast"],
+  "requirements": ["samsungtvws>=3.0.5", "PyChromecast>=14.0.10"],
+  "single_config_entry": true,
+  "version": "0.1.0"
+}

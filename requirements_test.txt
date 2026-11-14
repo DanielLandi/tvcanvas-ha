@@ -1,0 +1,4 @@
+pytest-homeassistant-custom-component==0.13.365
+samsungtvws==3.0.5
+PyChromecast==14.0.10
+ruff==0.13.0

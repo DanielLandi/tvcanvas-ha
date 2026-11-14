@@ -1,0 +1,33 @@
+[
+  {
+    "version": 1,
+    "tv": { "id": "frame-living", "kind": "frame", "host": "192.168.0.20", "name": "Living room Frame" },
+    "enabled": true,
+    "interval_seconds": 300,
+    "source": { "type": "board", "board": { "type_id": "weather", "params": { "location": "Lisbon" } } },
+    "frame": { "replace_previous": true }
+  },
+  {
+    "version": 1,
+    "tv": { "id": "cast-den", "kind": "cast", "host": "192.168.0.30", "name": "Den Google TV" },
+    "enabled": true,
+    "interval_seconds": 120,
+    "source": { "type": "collection", "shuffle": true, "orientation": "landscape", "images": [
+      { "url": "https://upload.wikimedia.org/wikipedia/commons/c/ce/Wheat-Field-with-Cypresses-%281889%29-Vincent-van-Gogh-Met.jpg", "title": "Wheat Field with Cypresses", "artist": "Vincent van Gogh", "proxied": false },
+      { "url": "met:paintings:abc123:def456", "title": "Proxied sample", "artist": null, "proxied": true }
+    ] }
+  },
+  {
+    "version": 1,
+    "tv": { "id": "frame-bedroom", "kind": "frame", "host": "192.168.0.22", "name": "Bedroom Frame" },
+    "enabled": true,
+    "interval_seconds": 600,
+    "source": { "type": "group", "shuffle": true, "group": { "items": [
+      { "type": "board", "board": { "type_id": "weather", "params": { "location": "Lisbon" } } },
+      { "type": "webcam", "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Fronalpstock_big.jpg/1280px-Fronalpstock_big.jpg", "name": "Fronalpstock" },
+      { "type": "board", "board": { "type_id": "crypto", "params": {} } },
+      { "type": "local", "sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", "name": "IMG_0042" }
+    ] } },
+    "frame": { "replace_previous": true }
+  }
+]

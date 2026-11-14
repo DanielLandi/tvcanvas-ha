@@ -1,0 +1,61 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect TVCanvas",
+        "description": "In the TVCanvas app: Settings → Home Assistant → Connect Home Assistant. Enter the code it shows (valid for 10 minutes).",
+        "data": {
+          "code": "Code"
+        },
+        "data_description": {
+          "code": "The 12 characters shown in the app, with or without dashes."
+        },
+        "sections": {
+          "advanced": {
+            "name": "Advanced",
+            "description": "Only change this to test against a development server. Enter just the server's address, for example {default_url}.",
+            "data": {
+              "cloud_url": "TVCanvas Cloud URL"
+            }
+          }
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reconnect TVCanvas",
+        "description": "TVCanvas no longer accepts this Home Assistant. Get a new code in the TVCanvas app and enter it here.",
+        "data": {
+          "code": "Code"
+        },
+        "data_description": {
+          "code": "The 12 characters shown in the app, with or without dashes."
+        }
+      }
+    },
+    "error": {
+      "code_format": "That isn't a TVCanvas code. Enter the 12 characters the app shows, for example K7QM-2XRA-P4NB (dashes and spaces are optional).",
+      "invalid_code": "TVCanvas Cloud didn't accept this code: it's wrong, already used, or expired (a code lasts 10 minutes). Get a new code in the TVCanvas app and enter it here.",
+      "cannot_connect": "Could not reach TVCanvas Cloud. Check that Home Assistant is connected to the internet and that the server URL is right, then try again.",
+      "wrong_server": "This server doesn't accept Home Assistant codes. Check the server URL (for example {default_url}).",
+      "too_many_attempts": "Too many attempts. Wait a few minutes, then try again.",
+      "server_error": "TVCanvas Cloud has a problem right now. Try again in a few minutes.",
+      "unexpected_answer": "TVCanvas Cloud gave an answer Home Assistant doesn't understand. Check the server URL and that the TVCanvas integration is up to date.",
+      "invalid_url": "Enter the server's address starting with https://, for example {default_url} (http:// works only for a server on your local network).",
+      "url_not_base": "Enter only the server's address, without a path, for example {default_url}.",
+      "unknown": "Unexpected error. Check the Home Assistant log and try again."
+    },
+    "abort": {
+      "single_instance_allowed": "TVCanvas is already set up.",
+      "reauth_successful": "TVCanvas is reconnected."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "last_update": {
+        "name": "Last update"
+      },
+      "paired_phones": {
+        "name": "Paired phones"
+      }
+    }
+  }
+}
