@@ -48,6 +48,9 @@ FRAME_CLIENT_NAME: Final = "TVCanvas-HA"
 FRAME_PAIR_TIMEOUT_SECONDS: Final = 60
 FRAME_DELETE_MAX_ATTEMPTS: Final = 3
 FRAME_STALE_MAX: Final = 20
+# Content ids HA uploaded to a Frame and has not deleted (kept with Replace previous off):
+# ~40 bytes each in the store; a 180 s pin fills it in two days, and the oldest drop first.
+FRAME_UPLOADED_MAX: Final = 1000
 FRAME_MY_PHOTOS: Final = "MY-C0002"
 FRAME_LOST_SLACK_SECONDS: Final = 5
 # Following a TV to a new DHCP address (locate.py, locate_cast.py, follow.py).

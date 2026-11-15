@@ -10,6 +10,7 @@ from functools import partial
 from typing import Any
 
 from homeassistant.core import HomeAssistant
+from homeassistant.util import dt as dt_util
 from samsungtvws import SamsungTVArt
 from samsungtvws.exceptions import ResponseError
 
@@ -20,6 +21,7 @@ from .const import (
     FRAME_MY_PHOTOS,
     FRAME_PAIR_TIMEOUT_SECONDS,
     FRAME_STALE_MAX,
+    FRAME_UPLOADED_MAX,
     FRAME_WS_PORT,
 )
 from .displays import STANDBY, DisplayError, HostRefused, home_literal, tv_address
@@ -323,6 +325,10 @@ class FrameDisplay(FollowsTV):
         self._verified: str | None = None
         # PowerState from /api/v2/ this tick ("on", "standby"); None when unknown.
         self.power_state: str | None = None
+        # Logged once per pin: with Replace previous off every image stays in My Photos.
+        self._kept_logged = False
+        # Ids whose failed delete was already logged (the retry each tick is not).
+        self._delete_warned: set[str] = set()
 
     # FollowsTV: a moved Frame is found, and checked, by the MAC in its id (locate.py).
 
@@ -376,6 +382,7 @@ class FrameDisplay(FollowsTV):
             raise
         except UploadedNotShown as err:
             self._save_token(err.token, token, address)
+            self._owned(err.content_id)
             if self._replace:  # on the TV but never shown: clean it up next time
                 self._set_stale(state, [*state["stale"], err.content_id])
             self._store.schedule_save()
@@ -388,10 +395,21 @@ class FrameDisplay(FollowsTV):
 
         self._save_token(new_token, token, address)
         state["current"] = content_id
+        self._owned(content_id)
+        self._gone(deleted)
         if not self._replace:
             state["stale"], state["attempts"] = [], {}
             state.pop("lost", None)
             self._store.schedule_save()
+            if not self._kept_logged:
+                self._kept_logged = True
+                _LOGGER.warning(
+                    "Frame %s: Replace previous is off for this pin, so every image Home "
+                    "Assistant shows stays in My Photos (%d so far); it records which are "
+                    "its own and deletes none of them",
+                    self._host,
+                    len(self._store.frame_uploaded(self._tv_id)),
+                )
             return
         for cid in failed:
             attempts[cid] = attempts.get(cid, 0) + 1
@@ -403,14 +421,39 @@ class FrameDisplay(FollowsTV):
                 ", ".join(given_up),
                 FRAME_DELETE_MAX_ATTEMPTS,
             )
-        self._set_stale(
-            state,
-            [
-                cid
-                for cid in to_delete
-                if cid not in deleted and cid != content_id and cid not in given_up
-            ],
-        )
+        left = [
+            cid
+            for cid in to_delete
+            if cid not in deleted and cid != content_id and cid not in given_up
+        ]
+        # Refused by the TV, or not reached because the connection broke: both stay in
+        # the stale list and are deleted on the next update. Said once per id.
+        if unlogged := [cid for cid in left if cid not in self._delete_warned]:
+            self._delete_warned.update(unlogged)
+            _LOGGER.warning(
+                "Frame %s: could not delete %s from My Photos; trying again on the next update",
+                self._host,
+                ", ".join(unlogged),
+            )
+        self._set_stale(state, left)
+        self._store.schedule_save()
+
+    def _owned(self, *cids: str) -> None:
+        """Record images HA just put in My Photos (oldest first, capped)."""
+        uploaded = self._store.frame_uploaded(self._tv_id)
+        when = dt_util.utcnow().isoformat(timespec="seconds")
+        for cid in cids:
+            uploaded.setdefault(cid, when)
+        while len(uploaded) > FRAME_UPLOADED_MAX:
+            del uploaded[next(iter(uploaded))]
+        self._store.schedule_save()
+
+    def _gone(self, cids: Iterable[str]) -> None:
+        """Forget images HA deleted from My Photos."""
+        uploaded = self._store.frame_uploaded(self._tv_id)
+        for cid in cids:
+            uploaded.pop(cid, None)
+            self._delete_warned.discard(cid)
         self._store.schedule_save()
 
     @staticmethod
@@ -466,6 +509,7 @@ class FrameDisplay(FollowsTV):
                 self._on_pairing(False)
         self._save_token(new_token, token, address)
         if deleted:
+            self._gone(deleted)
             if state["current"] in deleted:
                 state["current"] = None
             self._set_stale(state, [cid for cid in state["stale"] if cid not in deleted])
@@ -494,6 +538,7 @@ class FrameDisplay(FollowsTV):
         except Exception as err:  # noqa: BLE001 - best effort; the TV may be off
             _LOGGER.debug("Frame %s: release failed: %s", self._host, err)
             deleted = []
+        self._gone(deleted)
         left = [cid for cid in ids if cid not in deleted]
         if left:
             _LOGGER.warning(
@@ -516,6 +561,7 @@ class FrameDisplay(FollowsTV):
         self._save_token(new_token, token, address)
         del state["lost"]
         if adopted:
+            self._owned(*adopted)
             self._set_stale(state, [*state["stale"], *adopted])
         if ambiguous:
             _LOGGER.warning(

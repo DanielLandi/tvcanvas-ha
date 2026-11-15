@@ -25,6 +25,7 @@ class StateStore:
             ("rotation", {}),
             ("frame", {}),
             ("frame_tokens", {}),
+            ("frame_uploaded", {}),
             ("cast", {}),
         ):
             self._data.setdefault(key, default)
@@ -52,6 +53,13 @@ class StateStore:
 
     def frame(self, tv_id: str) -> dict[str, Any]:
         return self._data["frame"].setdefault(tv_id, {"current": None, "stale": []})
+
+    def frame_uploaded(self, tv_id: str) -> dict[str, str]:
+        """Every image HA put in a Frame's My Photos and has not deleted: content id ->
+        when (UTC, ISO), oldest first. The only proof of which images are HA's, so it
+        outlives the pin (`forget_tv`): with Replace previous off HA leaves its images on
+        the TV, and a later cleanup must never touch the user's own art."""
+        return self._data["frame_uploaded"].setdefault(tv_id, {})
 
     def cast(self, tv_id: str) -> dict[str, Any]:
         """A Cast TV's learned identity and, after a DHCP move, where HA followed it."""

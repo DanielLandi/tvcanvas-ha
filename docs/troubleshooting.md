@@ -80,7 +80,20 @@ Home Assistant puts each image into the Frame's **My Photos** with no mat and sh
 Mode, fitted to 3840 × 2160 and cropped from the centre. When the pin has **Replace
 previous** on (the default), it deletes the image it showed before, so My Photos doesn't fill
 up. **It only deletes images it uploaded itself, never your own art.** With **Replace
-previous** off, every image stays in My Photos.
+previous** off, every image stays in My Photos: Home Assistant logs a warning once
+(`Replace previous is off for this pin`) and records which images are its own, deleting none.
+A delete the TV refuses, or one cut off by a dropped connection, is logged once and tried
+again on the next update.
+
+**My Photos filled with copies?** Test builds of the TVCanvas app before November 2026
+sent group pins (albums and board groups) to Home Assistant with Replace previous off, so a
+fast group filled My Photos. To stop it, turn the pin's **Run on Home Assistant** off in the
+app (the phone, which deletes its previous image, runs it instead). To remove only the copies,
+[`scripts/frame_cleanup.py`](../scripts/frame_cleanup.py) (run from a clone of this
+repository with its [test venv](development.md#setup)) lists My Photos and picks the images Home Assistant uploaded: the ids it recorded, and the images
+dated just before a time its **Last update** sensor shows an image, at most one per update,
+3840 × 2160 without a mat. It is a dry run unless you add `--apply`; the docstring at the
+top of the script shows how to run it.
 
 Like the phone, Home Assistant checks the Frame's mode before every refresh:
 
