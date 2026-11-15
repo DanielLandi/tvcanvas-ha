@@ -41,9 +41,9 @@ The app shows only the short form.
   code like `K7QM-2XRA-P4NB` (older versions of the app show 8 characters, like `ABCD-2345`).
   It's valid for 10 minutes and works once. Type it with or without the dashes; case doesn't
   matter, and `O`, `I` and `L` are read as `0`, `1` and `1`.
-- **With a 12-character code**, Home Assistant sends only the first 8 characters to TVCanvas
-  Cloud. The last 4, which your phone made up and never sent to the cloud, let the phone pair
-  with Home Assistant over your home network during the next 10 minutes.
+- **One code does both:** it connects Home Assistant to your TVCanvas account and lets your
+  phone pair with Home Assistant over your home network during the next 10 minutes.
+  TVCanvas Cloud never learns what pairs your phone.
 - Leave the **Advanced** section of the setup form alone. It's only for testing against a
   development server.
 

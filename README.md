@@ -34,7 +34,7 @@ credits a day). Collections, webcams, custom images and photos don't.
 
 ## Set up in 3 steps
 
-![The 12-character code from the app: Home Assistant sends the first 8 characters to TVCanvas Cloud to connect to your account. The last 4 stay in your home and pair your phone for photos.](docs/images/setup-code.svg)
+![The TVCanvas app shows a code. Type it into Home Assistant's TVCanvas setup, and that's it: Home Assistant is connected and your phone is paired for photos.](docs/images/setup-code.svg)
 
 1. **Install.** Click the first button above, select **Download**, then restart Home
    Assistant. On 2026.11 or newer it opens Settings → Marketplace; on 2026.9 or 2026.10,
