@@ -19,7 +19,8 @@ It doesn't send your phone's photos, camera images, the images shown, your Home 
 entities or anything else from Home Assistant.
 
 TVCanvas Cloud stores the pins the app writes, including each TV's name and local IP
-address, because Home Assistant needs them to find the TV.
+address, because Home Assistant needs them to find the TV. The TVCanvas app's own privacy
+policy is at [tvcanvas.app/privacy](https://tvcanvas.app/privacy).
 
 ## From your phone to Home Assistant
 

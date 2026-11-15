@@ -1,6 +1,8 @@
 # TVCanvas for Home Assistant
 
-Keeps your TVs showing your TVCanvas pins, day and night, without your phone.
+The Home Assistant companion of [TVCanvas](https://tvcanvas.app), the iPhone app that puts
+art, photos and live dashboards on your TV. It keeps your TVs showing your TVCanvas pins, day
+and night, without your phone.
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=DanielLandi&repository=tvcanvas-ha&category=integration)
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=tvcanvas)
