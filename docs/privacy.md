@@ -5,8 +5,8 @@ everything the integration sends, fetches and keeps.
 
 ## To TVCanvas Cloud
 
-- The pairing code (its first 8 characters only), once, in exchange for a token for this
-  Home Assistant. The token renews itself before it expires; disconnecting in the app
+- The pairing code, once, in exchange for a token for this Home Assistant (never what pairs
+  your phone for photos: that stays in your home). The token renews itself before it expires; disconnecting in the app
   revokes it.
 - A check for changed pins every minute.
 - For each refresh, a status: the TV's TVCanvas id, success or failure, the short status the
