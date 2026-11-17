@@ -3,15 +3,19 @@
 from __future__ import annotations
 
 import json
+import logging
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import quote
 
 import aiohttp
 
 from .const import MAX_IMAGE_BYTES, MAX_JSON_BYTES, STATUS_ERROR_MAX, TV_HEIGHT, TV_WIDTH
+
+_LOGGER = logging.getLogger(__name__)
 
 CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 _TIMEOUT = aiohttp.ClientTimeout(total=30)
@@ -113,6 +117,48 @@ def _raise_for(status: int) -> None:
         raise CloudError(f"cloud answered {status}")
 
 
+# Cloud URLs that answered 422 to a status report carrying `showing`: HA leaves `showing`
+# out for them until it restarts. (A cloud without `showing` ignores the key; this is a
+# safety net.)
+_NO_SHOWING: set[str] = set()
+SHOWING_KINDS = frozenset({"board", "photo", "collection", "webcam", "custom_url"})
+SHOWING_NAME_MAX = 64
+_SHOWING_KEYS = frozenset({"name", "kind", "index", "count", "since", "paused"})
+_SINCE = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?(Z|\+00:00)")
+_SINCE_AHEAD_MAX = timedelta(minutes=5)
+
+
+def valid_showing(showing: Any) -> dict[str, Any] | None:
+    """*showing* when it meets every rule of the cloud contract, else None (sent as
+    `null`). The cloud answers 422 to the whole report for any broken rule, so a report
+    is never risked on it: every key required and no other, `name` 1–64 printable
+    characters after trimming and no `://`, `kind` one of SHOWING_KINDS, `index` and
+    `count` ints with 0 <= index < count, `paused` a bool, `since` RFC 3339 UTC and not
+    more than 5 minutes ahead."""
+    if not isinstance(showing, dict) or set(showing) != _SHOWING_KEYS:
+        return None
+    name, index, count = showing["name"], showing["index"], showing["count"]
+    if not isinstance(name, str):
+        return None
+    name = name.strip()
+    if not 1 <= len(name) <= SHOWING_NAME_MAX or not name.isprintable() or "://" in name:
+        return None
+    if showing["kind"] not in SHOWING_KINDS or not isinstance(showing["paused"], bool):
+        return None
+    if any(type(v) is not int for v in (index, count)) or not 0 <= index < count:
+        return None
+    since = showing["since"]
+    if not isinstance(since, str) or not _SINCE.fullmatch(since):
+        return None
+    try:
+        at = datetime.fromisoformat(since.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if at - datetime.now(UTC) > _SINCE_AHEAD_MAX:
+        return None
+    return {**showing, "name": name}
+
+
 class CloudClient:
     def __init__(
         self, session: aiohttp.ClientSession, base_url: str, token: str | None = None
@@ -177,14 +223,36 @@ class CloudClient:
             raise CloudError("specs is not a list")
         return SyncResult(specs=specs, etag=reply.headers.get("ETag"))
 
-    async def agent_status(self, tv_id: str, ok: bool, error: str | None, at: datetime) -> None:
-        body = {
+    async def agent_status(
+        self,
+        tv_id: str,
+        ok: bool,
+        error: str | None,
+        at: datetime,
+        showing: dict[str, Any] | None = None,
+    ) -> None:
+        """Report one TV's tick. *showing* is what the TV shows, for the phone. Each report
+        replaces the cloud's copy, so it goes with every report: `null` when HA doesn't
+        know, or when it breaks a rule (valid_showing). A cloud that answers 422 to a
+        report with `showing` gets it again without, and none of it until HA restarts."""
+        body: dict[str, Any] = {
             "tv_id": tv_id,
             "ok": ok,
             "error": error[:STATUS_ERROR_MAX] if error else None,
             "at": at.isoformat(),
         }
+        with_showing = self._base not in _NO_SHOWING
+        if with_showing:
+            body["showing"] = valid_showing(showing)
         reply = await self._request("POST", "/ha/agent/status", json=body)
+        if reply.status == 422 and with_showing:
+            _NO_SHOWING.add(self._base)
+            _LOGGER.info(
+                "TVCanvas: this TVCanvas Cloud doesn't take `showing` in status reports; "
+                "leaving it out until Home Assistant restarts"
+            )
+            body = {k: v for k, v in body.items() if k != "showing"}
+            reply = await self._request("POST", "/ha/agent/status", json=body)
         if reply.status == 404:
             return
         _raise_for(reply.status)

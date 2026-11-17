@@ -21,7 +21,7 @@ Code: `custom_components/tvcanvas/api.py` (status → exception),
 |---|---|---|
 | `POST /ha/claim` | (not sent) | A code that isn't 8 or 12 Crockford characters after normalising is refused before any call: `code_format` on the code field ("enter the 12 characters the app shows"). Only the first 8 are ever sent; the last 4 of a 12-character code are the phone's LAN setup code and never leave the home ([`lan-api.md`](lan-api.md) §3) |
 | `POST /ha/claim` | 400 | `invalid_code` on the code field: wrong, used or expired (codes last 10 minutes); get a new one in the app |
-| `POST /ha/claim` | 401, 403, 404, 405, any 3xx, or a 2xx that isn't a token | `wrong_server`: "This server doesn't accept Home Assistant codes — check the server URL". `/ha/claim` needs no auth, so these mean the URL points elsewhere, or at a TVCanvas server without the HA endpoints (it answers 401 "Invalid or missing API key") |
+| `POST /ha/claim` | 401, 403, 404, 405, any 3xx, or a 2xx that isn't a token | `wrong_server`: "This server doesn't accept Home Assistant codes. Check the server URL". `/ha/claim` needs no auth, so these mean the URL points elsewhere, or at a TVCanvas server without the HA endpoints (it answers 401 "Invalid or missing API key") |
 | `POST /ha/claim` | 429 | `too_many_attempts`: wait a few minutes |
 | `POST /ha/claim` | 5xx | `server_error`: try again later |
 | `POST /ha/claim` | no answer (DNS, refused, TLS, timeout) | `cannot_connect`: check HA's internet connection and the server URL |
@@ -40,9 +40,22 @@ Code: `custom_components/tvcanvas/api.py` (status → exception),
 | any call | 401, 403 | Stops every TV and starts re-authentication (see the cloud doc) |
 | any call | 3xx other than 304 | Error; redirects to the cloud are never followed |
 | any call | a body over 4 MB (JSON) or 25 MB (`/board`, `/collections/proxy`) | Refused as it streams, never held whole: a sync keeps the last stored specs, an image is `image fetch failed` |
+| `POST /ha/agent/status` | 422 to a report carrying `showing` | Sends the same report again without `showing`, and leaves `showing` out for that cloud URL until Home Assistant restarts (an older cloud ignores the key and answers 204, so this is a safety net) |
 | `GET /ha/agent/sync` | more than 20 specs | Runs the first 20 and logs one warning (the cloud allows 10 TVs) |
 
 ## HA-side status details
+
+- Every status report carries `showing` (what the TV shows, for the phone), because each
+  report replaces the cloud's copy: the item's name as the "Now showing" select names it
+  (never a URL or a key), its kind (`board`, `photo`, `collection`, `webcam`,
+  `custom_url`; a group's item has its own kind), `index` (its place in the rotation, from
+  0, shuffle included) and `count`, `since` (RFC 3339 UTC, whole seconds) and `paused`. HA
+  checks the cloud's rules itself (`api.valid_showing`) and sends `null` instead of a
+  value that breaks one, so a 422 never costs a tick; `null` also when it knows of no item
+  on the TV. A paused TV reports `ok: true` with no error once per interval (as in
+  standby) and HA touches nothing on it. Toggling pause sends one extra report, at least
+  10 s after the TV's previous one; changes in between ride on it, and a tick's report
+  replaces it.
 
 - HA sends the cloud only the generic category from the cloud doc's table; the
   full error (which can name LAN hosts or URLs) stays in the TV's sensor

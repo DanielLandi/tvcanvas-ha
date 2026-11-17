@@ -384,6 +384,115 @@ async def test_fetch_image_limits(hass, aioclient_mock) -> None:
         await fetch_image(session, "https://x/missing.jpg")
 
 
+JPEG = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01" + b"\x00" * 64
+PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
+GIF = b"GIF89a" + b"\x00" * 64
+WEBP = b"RIFF\x40\x00\x00\x00WEBPVP8 " + b"\x00" * 64
+
+
+async def test_fetch_image_accepts_an_octet_stream_jpeg(hass, aioclient_mock) -> None:
+    """GeoNet serves its volcano cams as application/octet-stream."""
+    from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
+    from custom_components.tvcanvas.sources import fetch_image
+
+    session = async_get_clientsession(hass)
+    aioclient_mock.get(
+        "https://x/cam.jpg", content=JPEG, headers={"Content-Type": "application/octet-stream"}
+    )
+    assert await fetch_image(session, "https://x/cam.jpg") == JPEG
+
+
+@pytest.mark.parametrize("body", [JPEG, PNG, GIF, WEBP])
+@pytest.mark.parametrize(
+    "ctype", ["application/octet-stream", "binary/octet-stream", "Application/Octet-Stream; x=1"]
+)
+async def test_fetch_image_sniffs_unlabelled_images(hass, aioclient_mock, ctype, body) -> None:
+    from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
+    from custom_components.tvcanvas.sources import fetch_image
+
+    session = async_get_clientsession(hass)
+    aioclient_mock.get("https://x/cam", content=body, headers={"Content-Type": ctype})
+    assert await fetch_image(session, "https://x/cam") == body
+
+
+async def test_fetch_image_sniffs_a_missing_content_type(hass, aioclient_mock) -> None:
+    from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
+    from custom_components.tvcanvas.sources import fetch_image
+
+    session = async_get_clientsession(hass)
+    aioclient_mock.get("https://x/cam", content=PNG, headers={})
+    assert await fetch_image(session, "https://x/cam") == PNG
+    aioclient_mock.get("https://x/page", content=b"<html><body>hi</body></html>", headers={})
+    with pytest.raises(SourceError, match="not an image"):
+        await fetch_image(session, "https://x/page")
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        b"<!DOCTYPE html><html><body>Camera offline</body></html>",
+        b'{"error": "not found", "detail": "no such camera"}',
+        b"plain text error page, nothing to see here",
+        b"\xff\xd8",  # too short to be a JPEG
+        b"RIFF\x40\x00\x00\x00WAVEfmt " + b"\x00" * 64,  # RIFF, but audio
+        b"",
+    ],
+)
+async def test_fetch_image_rejects_an_octet_stream_that_is_not_an_image(
+    hass, aioclient_mock, body
+) -> None:
+    from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
+    from custom_components.tvcanvas.sources import fetch_image
+
+    session = async_get_clientsession(hass)
+    aioclient_mock.get(
+        "https://x/cam.jpg", content=body, headers={"Content-Type": "application/octet-stream"}
+    )
+    with pytest.raises(SourceError, match="not an image"):
+        await fetch_image(session, "https://x/cam.jpg")
+
+
+async def test_fetch_image_still_trusts_image_types(hass, aioclient_mock) -> None:
+    """A declared image/* type is accepted as before; the bytes are left to the decoder."""
+    from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
+    from custom_components.tvcanvas.sources import fetch_image
+
+    session = async_get_clientsession(hass)
+    aioclient_mock.get("https://x/a.jpg", content=JPEG, headers={"Content-Type": "image/jpeg"})
+    assert await fetch_image(session, "https://x/a.jpg") == JPEG
+
+
+@pytest.mark.parametrize(
+    "ctype", ["text/html", "text/html; charset=utf-8", "application/json", "text/plain"]
+)
+async def test_fetch_image_rejects_text_types_even_with_image_bytes(
+    hass, aioclient_mock, ctype
+) -> None:
+    from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
+    from custom_components.tvcanvas.sources import fetch_image
+
+    session = async_get_clientsession(hass)
+    aioclient_mock.get("https://x/page", content=JPEG, headers={"Content-Type": ctype})
+    with pytest.raises(SourceError, match="not an image"):
+        await fetch_image(session, "https://x/page")
+    assert aioclient_mock.call_count == 1
+
+
+def test_looks_like_image() -> None:
+    from custom_components.tvcanvas.sources import looks_like_image
+
+    for body in (JPEG, PNG, GIF, WEBP):
+        assert looks_like_image(body)
+    for body in (b"", b"<html>", b"GIF90a......", b"RIFF\x00\x00\x00\x00AVI LIST"):
+        assert not looks_like_image(body)
+
+
 async def test_fetch_image_rejects_non_public_url(hass, aioclient_mock) -> None:
     from homeassistant.helpers.aiohttp_client import async_get_clientsession
 

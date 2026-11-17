@@ -293,7 +293,7 @@ async def test_status_waits_for_missing_photos_while_showing_the_rest(photos, ma
     runner, client, display = make_runner([local(A), local(B), local(C)])
     await runner.tick()
     assert display.shown == [A]
-    tv_id, ok, error, _ = client.agent_status.call_args[0]
+    tv_id, ok, error, _, _showing = client.agent_status.call_args[0]
     assert (ok, error) == (False, "waiting: photos 2")
     assert runner.status.last_ok is not None  # HA's sensor records the update
     assert runner.status.last_error == "waiting: photos 2"

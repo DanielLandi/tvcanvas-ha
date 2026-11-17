@@ -12,5 +12,5 @@
   "loggers": ["samsungtvws", "pychromecast"],
   "requirements": ["samsungtvws>=3.0.5", "PyChromecast>=14.0.10"],
   "single_config_entry": true,
-  "version": "0.1.2"
+  "version": "0.2.0"
 }

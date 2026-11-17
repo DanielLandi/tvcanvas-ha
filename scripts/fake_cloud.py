@@ -21,6 +21,9 @@ from PIL import Image, ImageDraw
 PAIR_CODE = "ABCD2345"
 # Stateless auth: any fake token is valid, so restarting the fake cloud does not force reauth.
 TOKEN_PREFIX = "fc_ha_fake"
+# A status report's optional `showing` (the cloud checks more; HA checks all of it first).
+SHOWING_KEYS = {"name", "kind", "index", "count", "since", "paused"}
+SHOWING_KINDS = {"board", "photo", "collection", "webcam", "custom_url"}
 
 
 def _jpeg(label: str) -> bytes:
@@ -61,7 +64,16 @@ def make_app(specs_path: Path, fail_board: int | None) -> web.Application:
     async def status(request: web.Request) -> web.Response:
         if not authed(request):
             return web.Response(status=401)
-        print("STATUS", await request.json(), flush=True)
+        body = await request.json()
+        print("STATUS", body, flush=True)
+        showing = body.get("showing")
+        if showing is not None and (
+            not isinstance(showing, dict)
+            or set(showing) != SHOWING_KEYS
+            or showing["kind"] not in SHOWING_KINDS
+            or not 0 <= showing["index"] < showing["count"]
+        ):
+            return web.json_response({"detail": [{"loc": ["body", "showing"]}]}, status=422)
         return web.Response(status=204)
 
     async def refresh(request: web.Request) -> web.Response:

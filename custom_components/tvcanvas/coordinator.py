@@ -68,6 +68,11 @@ class TVCanvasCoordinator(DataUpdateCoordinator[dict[str, SyncSpec]]):
         self._shutdown = False
         self._image_session: aiohttp.ClientSession | None = None
         self._skipped: set[str] = set()  # "tv id: error" lines already warned about
+        self._paired: set[str] = set()
+        self._unsub_pairing: Callable[[], None] | None = None
+        if pairing is not None:
+            self._paired = {p.key_hash for p in pairing.phones}
+            self._unsub_pairing = pairing.async_add_listener(self._pairing_changed)
 
     def async_add_runner_listener(self, cb: Callable[[TVRunner], None]) -> None:
         self._runner_listeners.append(cb)
@@ -95,7 +100,25 @@ class TVCanvasCoordinator(DataUpdateCoordinator[dict[str, SyncSpec]]):
         specs = self._parse(raw_specs)
         await self._reconcile(specs)
         await self._collect_photos(raw_specs)
+        self.forget_photo_images(missing_only=True)
         return specs
+
+    def forget_photo_images(self, missing_only: bool = False) -> None:
+        """Drop the dashboard's copies of phone photos (shown on a TV, or previewed): every
+        one, or only those whose file HA no longer holds (deleted, collected)."""
+        held = self.photos if missing_only else None
+        dropped = False
+        for runner in self.runners.values():
+            dropped = runner.forget_shown(photos_only=True, held=held) or dropped
+        if dropped:
+            self.async_update_listeners()
+
+    def _pairing_changed(self) -> None:
+        """A phone was unpaired (or evicted by a sixth): its photos leave the dashboard."""
+        now = {p.key_hash for p in self.pairing.phones} if self.pairing is not None else set()
+        if self._paired - now:
+            self.forget_photo_images()
+        self._paired = now
 
     async def _collect_photos(self, raw_specs: list[Any]) -> None:
         """Delete phone photos no spec references any more (10 minutes after upload)."""
@@ -146,6 +169,7 @@ class TVCanvasCoordinator(DataUpdateCoordinator[dict[str, SyncSpec]]):
                 return
             if tv_id not in specs:
                 removed = self.runners.pop(tv_id)
+                removed.forget_shown()
                 await removed.stop()
                 removed.release()  # the phone took this TV back: clean up what HA left
                 persistent_notification.async_dismiss(self.hass, f"tvcanvas_pair_{tv_id}")
@@ -216,7 +240,7 @@ class TVCanvasCoordinator(DataUpdateCoordinator[dict[str, SyncSpec]]):
                 persistent_notification.async_create(
                     self.hass,
                     f"Approve **TVCanvas-HA** on your TV ({tv.name})"
-                    " — press Allow with the TV remote.",
+                    ". Press Allow with the TV remote.",
                     title="TVCanvas",
                     notification_id=notification_id,
                 )
@@ -279,9 +303,13 @@ class TVCanvasCoordinator(DataUpdateCoordinator[dict[str, SyncSpec]]):
 
     async def async_unload(self) -> None:
         """Stop every TV, forget its Cast images and write the store now."""
+        if self._unsub_pairing is not None:
+            self._unsub_pairing()
+            self._unsub_pairing = None
         await self.async_shutdown_runners()
-        for tv_id in self.runners:
+        for tv_id, runner in self.runners.items():
             self._cache.drop_tv(tv_id)
+            runner.forget_shown()
         await self._store.async_save_now()
 
 

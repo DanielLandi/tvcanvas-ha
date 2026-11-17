@@ -18,7 +18,7 @@ from .lan_view import LanHub, register_views
 from .photos import PhotoStore, async_remove_all
 from .storage import StateStore
 
-PLATFORMS = [Platform.SENSOR]
+PLATFORMS = [Platform.BUTTON, Platform.IMAGE, Platform.SELECT, Platform.SENSOR, Platform.SWITCH]
 # The "Pair a phone for photos" button and its 6-digit code, removed (tvcanvas-ha#21):
 # the 12-character code pairs the phone. Its unique id, for removal on upgrade.
 _RETIRED_BUTTON_ID = "{entry_id}_lan_pair"
@@ -95,6 +95,10 @@ async def async_remove_config_entry_device(
 
 async def async_remove_entry(hass: HomeAssistant, entry: TVCanvasConfigEntry) -> None:
     """The private stores and the phones' photos outlive the entry otherwise."""
+    coordinator = getattr(entry, "runtime_data", None)
+    if coordinator is not None:  # normally already dropped at unload; never keep a copy
+        for runner in coordinator.runners.values():
+            runner.forget_shown()
     await StateStore(hass, entry.entry_id).async_remove()
     await keys_store(hass, entry.entry_id).async_remove()
     await async_remove_all(hass)

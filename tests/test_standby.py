@@ -138,7 +138,7 @@ async def test_standby_renders_and_uploads_nothing_and_is_not_an_error(runner) -
     assert r.status.last_error is None and r.status.last_tick is not None
     assert r.tv_state == "standby"
     # The contract has no standby status: ok with no error, so the phone shows none.
-    tv_id, ok, error, _at = r.client.agent_status.call_args[0]
+    tv_id, ok, error, _at, _showing = r.client.agent_status.call_args[0]
     assert (tv_id, ok, error) == ("tv-1", True, None)
     # No backoff: asked again soon, not after the 180 s interval.
     assert r.next_delay() == FRAME_STANDBY_POLL_SECONDS

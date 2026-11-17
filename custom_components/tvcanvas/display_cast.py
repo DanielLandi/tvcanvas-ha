@@ -201,7 +201,7 @@ class CastDisplay(FollowsTV):
             )
         except NoURLAvailableError as err:
             raise DisplayError(
-                "Home Assistant has no local URL a Cast TV can reach — set one in "
+                "Home Assistant has no local URL a Cast TV can reach. Set one in "
                 "Settings → System → Network"
             ) from err
         name = self._cache.put(self._tv_id, jpeg)

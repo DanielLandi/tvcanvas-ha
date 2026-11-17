@@ -57,8 +57,9 @@ No button, or installing by hand? See
 
 ## What you get
 
-- **A device per TV** with a **Last update** sensor: when the last image was shown, and the
-  latest status in its `last_error` attribute.
+- **A device per TV** with a **Last update** sensor (when the last image was shown, and the
+  latest status in its `last_error` attribute) and controls for your dashboards: see what's
+  on the TV, pick another item, pause, skip, or preview an item first ([Entities](#entities)).
 - **A TVCanvas device** with a **Paired phones** sensor: the phones that may send photos.
 - **On a Frame**, images go to My Photos with no mat. With *Replace previous* on, Home
   Assistant deletes the image it showed before, never your own art.
@@ -67,17 +68,103 @@ No button, or installing by hand? See
 - **It keeps going** when TVCanvas Cloud is down (boards wait; everything else carries on)
   and picks a TV up again as soon as it's back.
 
-There are no switches or settings in Home Assistant: you choose everything in the app.
-Collages, picture-in-picture and overlays are drawn by the phone, so Home Assistant shows
+You still choose each TV's pin in the app; Home Assistant moves only within it. Collages, picture-in-picture and overlays are drawn by the phone, so Home Assistant shows
 the images without them; Photos albums stay on the phone
 ([what each pin shows](docs/troubleshooting.md#what-each-pin-shows)).
+
+## Entities
+
+Each TV is a device with these entities (`<tv>` is the TV's name, like `living_room`):
+
+| Entity | What it does |
+|---|---|
+| **Last update** `sensor.<tv>_last_update` | When the last image was shown. The `last_error` attribute holds the latest status |
+| **Now showing** `select.<tv>_now_showing` | The item on the TV: a board, a collection image, a webcam, a link or a phone photo, by name. Pick another to show it now; the rotation carries on from there |
+| **Current image** `image.<tv>_current_image` | The image the TV shows, for a picture card |
+| **Pause rotation** `switch.<tv>_pause_rotation` | On: the TV keeps its current item and Home Assistant leaves the TV alone. Off: the rotation resumes at the next refresh. It stays on after a restart. You can still pick an item or press **Next image**; the TV then stays paused on it |
+| **Next image** `button.<tv>_next_image` | Shows the next item now, as the next refresh would |
+| **Preview** `select.<tv>_preview` | Pick an item to see it in **Preview image** first. The TV is not touched |
+| **Preview image** `image.<tv>_preview_image` | The item picked in **Preview** |
+| **Show preview on TV** `button.<tv>_show_preview_on_tv` | Sends the previewed item to the TV, with the same image |
+
+The **TVCanvas** device has a **Paired phones** sensor: the phones that may send photos.
+
+Previews of phone photos, webcams, links and collection images are free. **Previewing a
+board renders it, which uses 1 credit**, as on the phone (sending that preview to the TV
+doesn't use another). A board preview is refused while a Frame is in standby, and you can
+preview at most one board every 30 seconds per TV. Picking a board in **Now showing**, or
+**Next image** on a board, renders it too and uses a credit.
+
+The images of your phone's photos, in **Current image** and **Preview image**, are shown
+only to devices on your home network: from outside (Home Assistant Cloud's remote access,
+port forwarding) they show as a broken picture.
+
+The app shows what Home Assistant has on each TV, and whether it's paused.
+
+## Automations
+
+Pause the living room TV while a movie plays, and carry on afterwards:
+
+```yaml
+automation:
+  - alias: Hold the TV image during a movie
+    triggers:
+      - trigger: state
+        entity_id: media_player.living_room
+        to: playing
+    actions:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.living_room_pause_rotation
+  - alias: Carry on after the movie
+    triggers:
+      - trigger: state
+        entity_id: media_player.living_room
+        from: playing
+        for: "00:02:00"
+    actions:
+      - action: switch.turn_off
+        target:
+          entity_id: switch.living_room_pause_rotation
+```
+
+Show the weather every morning at 7 (the option is the item's name in **Now showing**):
+
+```yaml
+automation:
+  - alias: Weather at breakfast
+    triggers:
+      - trigger: time
+        at: "07:00:00"
+    actions:
+      - action: select.select_option
+        target:
+          entity_id: select.living_room_now_showing
+        data:
+          option: Weather Dashboard
+```
+
+A wall switch or remote button that skips to the next image:
+
+```yaml
+automation:
+  - alias: Next image from the wall switch
+    triggers:
+      - trigger: state
+        entity_id: event.hallway_switch_button_1
+    actions:
+      - action: button.press
+        target:
+          entity_id: button.living_room_next_image
+```
 
 ## Privacy and security
 
 - **Your photos stay home.** They go from your phone to Home Assistant over your home
   network only. They are part of Home Assistant's backups.
 - **Home Assistant never sends photos or images to TVCanvas Cloud**, nor your TVs'
-  addresses: only a check for new pins and a short status per refresh.
+  addresses: only a check for new pins and a short status per refresh, with the name of
+  what each TV shows so the app can show it too.
 - **Images go only to TVs on your home network.** Home Assistant refuses any TV address
   that isn't private, and its image and photo addresses answer only your home network.
 - **A TV that moves to a new address** is followed only after Home Assistant has checked

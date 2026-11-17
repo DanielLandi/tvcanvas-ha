@@ -12,6 +12,12 @@ everything the integration sends, fetches and keeps.
 - For each refresh, a status: the TV's TVCanvas id, success or failure, the short status the
   app shows, and the time. **Never** the detailed error, so never your TVs' IP addresses or
   other details of your network.
+- With each status, what the TV shows, so the app can show it: the item's name as the
+  **Now showing** entity names it, its kind (board, photo, collection, webcam or link), its
+  place in the rotation, since when, and whether the rotation is paused. The name is a
+  board's catalog name (with an airport code or a sports league at most, never other board
+  settings), a collection image's title, or the name the app gave a webcam, link or photo;
+  never an address, a URL or a key. Pausing sends one status at once.
 - For board pins, the board and its settings, so the cloud can render it (this uses
   credits). For collection images the app marked to go through TVCanvas, the image's id.
 
@@ -53,8 +59,13 @@ key), are left out of error messages, logs, the sensor's attributes and diagnost
 ## What Home Assistant keeps
 
 - In a private file in Home Assistant's `.storage` folder: your last pins (so it keeps
-  working when the cloud is down), each TV's place in its rotation, the Frames' permission
-  tokens and the ids of the images it uploaded.
+  working when the cloud is down), each TV's place in its rotation, which item it shows and
+  since when, whether its rotation is paused, the Frames' permission tokens and the ids of
+  the images it uploaded.
+- In memory only, until the pin changes or Home Assistant restarts: the image each TV shows
+  and the last preview, for the **Current image** and **Preview image** entities. They are
+  served only through Home Assistant's own image proxy, to logged-in users, and an image of
+  one of your phone's photos only to devices on your home network.
 - In a second private file: the paired phones' names and hashed keys.
 - In `config/tvcanvas/images/`: the photos your phone sent. **They are part of Home
   Assistant's backups**, including cloud backups (for example Home Assistant Cloud).

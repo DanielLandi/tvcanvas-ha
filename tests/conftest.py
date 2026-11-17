@@ -17,6 +17,16 @@ def auto_enable_custom_integrations(enable_custom_integrations):
     yield
 
 
+@pytest.fixture(autouse=True)
+def fresh_showing_fallback():
+    """A cloud's 422 to `showing` lasts until HA restarts (module state): reset per test."""
+    from custom_components.tvcanvas import api
+
+    api._NO_SHOWING.clear()
+    yield
+    api._NO_SHOWING.clear()
+
+
 PUBLIC_IP = "93.184.215.14"
 
 
