@@ -49,12 +49,41 @@
     }
   },
   "entity": {
+    "button": {
+      "next_image": {
+        "name": "Next image"
+      },
+      "show_preview": {
+        "name": "Show preview on TV"
+      }
+    },
+    "image": {
+      "current_image": {
+        "name": "Current image"
+      },
+      "preview_image": {
+        "name": "Preview image"
+      }
+    },
+    "select": {
+      "now_showing": {
+        "name": "Now showing"
+      },
+      "preview": {
+        "name": "Preview"
+      }
+    },
     "sensor": {
       "last_update": {
         "name": "Last update"
       },
       "paired_phones": {
         "name": "Paired phones"
+      }
+    },
+    "switch": {
+      "pause_rotation": {
+        "name": "Pause rotation"
       }
     }
   }

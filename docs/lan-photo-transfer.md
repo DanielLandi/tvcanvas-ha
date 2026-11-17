@@ -1,6 +1,6 @@
 # Phone → Home Assistant photo transfer over the LAN (feasibility note)
 
-Status: **decided 2026-11-09, being built — contract in [`lan-api.md`](lan-api.md)**. Written 2026-11-08 with the group-pins
+Status: **decided 2026-11-09, being built; contract in [`lan-api.md`](lan-api.md)**. Written 2026-11-08 with the group-pins
 work (HA runs a group's boards, webcams and links; images stored on the phone are
 skipped). Question from the owner: could the phone hand those images to HA directly
 over the home network instead of through TVCanvas Cloud?

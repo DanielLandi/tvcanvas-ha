@@ -33,11 +33,12 @@ def test_english_translation_matches_strings() -> None:
 
 
 def test_no_strings_for_the_retired_pairing_button() -> None:
-    """The "Pair a phone for photos" button is gone (#21); so are its strings."""
+    """The "Pair a phone for photos" button is gone (#21); so are its strings. The
+    per-TV buttons (button.py) are "Next image" and "Show preview on TV"."""
     strings = json.loads((MANIFEST.parent / "strings.json").read_text())
-    assert set(strings["entity"]) == {"sensor"}
+    assert set(strings["entity"]["button"]) == {"next_image", "show_preview"}
     assert "pair_phone" not in json.dumps(strings)
-    assert not (MANIFEST.parent / "button.py").exists()
+    assert "lan_pair" not in (MANIFEST.parent / "button.py").read_text()
 
 
 def test_every_config_flow_error_has_a_translation() -> None:

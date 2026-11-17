@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import random
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
@@ -19,6 +18,7 @@ from .const import (
     MAX_REDIRECTS,
 )
 from .imaging import ImageError
+from .items import rotation_order
 from .models import SyncSpec, public_https_url
 from .photos import PhotoStore
 from .urlsafety import check_resolves_public
@@ -72,6 +72,26 @@ async def _check_resolves_public(url: yarl.URL) -> None:
         raise SourceError(_scrub(f"{url}: {err.strerror or err}")) from err
 
 
+# Some publishers (GeoNet's volcano cams, for one) label real JPEGs as a generic binary
+# download or send no type at all. Those are accepted only when the bytes are an image.
+_UNLABELLED_TYPES = ("", "application/octet-stream", "binary/octet-stream")
+_SNIFF_BYTES = 12
+
+
+def _media_type(headers: Any) -> str:
+    return headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+
+
+def looks_like_image(data: bytes) -> bool:
+    """True when *data* starts with JPEG, PNG, WebP or GIF magic bytes."""
+    return (
+        data.startswith(b"\xff\xd8\xff")
+        or data.startswith(b"\x89PNG\r\n\x1a\n")
+        or data.startswith((b"GIF87a", b"GIF89a"))
+        or (data[:4] == b"RIFF" and data[8:12] == b"WEBP")
+    )
+
+
 def _declared_length(headers: Any) -> int:
     try:
         return int(headers.get("Content-Length", 0))
@@ -85,7 +105,10 @@ async def fetch_image(session: aiohttp.ClientSession, url: str) -> bytes:
     Every hop's host must resolve to public addresses only. *session* should come from
     `urlsafety.create_image_session`: its resolver repeats that check for the address it
     connects to, so a name that re-resolves to the LAN in between (DNS rebinding) is
-    refused too."""
+    refused too.
+
+    The answer must be labelled `image/*`, or be labelled as generic binary (or not at
+    all) and start with JPEG, PNG, WebP or GIF magic bytes."""
     current = _validated(url)
     try:
         async with asyncio.timeout(FETCH_TIMEOUT_SECONDS):
@@ -104,7 +127,9 @@ async def fetch_image(session: aiohttp.ClientSession, url: str) -> bytes:
                         continue
                     if resp.status != 200:
                         raise SourceError(_scrub(f"{current} answered {resp.status}"))
-                    if not resp.headers.get("Content-Type", "").startswith("image/"):
+                    media_type = _media_type(resp.headers)
+                    sniff = not media_type.startswith("image/")
+                    if sniff and media_type not in _UNLABELLED_TYPES:
                         raise SourceError(_scrub(f"{current} is not an image"))
                     if _declared_length(resp.headers) > MAX_IMAGE_BYTES:
                         raise SourceError(_scrub(f"{current} is larger than 25 MB"))
@@ -113,6 +138,12 @@ async def fetch_image(session: aiohttp.ClientSession, url: str) -> bytes:
                         buf += chunk
                         if len(buf) > MAX_IMAGE_BYTES:
                             raise SourceError(_scrub(f"{current} is larger than 25 MB"))
+                        if sniff and len(buf) >= _SNIFF_BYTES:
+                            if not looks_like_image(bytes(buf[:_SNIFF_BYTES])):
+                                raise SourceError(_scrub(f"{current} is not an image"))
+                            sniff = False
+                    if sniff and not looks_like_image(bytes(buf)):
+                        raise SourceError(_scrub(f"{current} is not an image"))
                     return bytes(buf)
     except (aiohttp.ClientError, TimeoutError) as err:
         raise SourceError(_scrub(f"{current}: {err}")) from err
@@ -213,8 +244,7 @@ async def _rotate(spec, rotation, client, session, fit, credits, photos) -> tupl
         rotation.clear()
         rotation.update(key=src.items_key, pos=0)
     # A group arrives in the phone's order, its shuffle already applied.
-    reorder = src.shuffle and src.type != "group"
-    order = random.Random(src.items_key).sample(range(n), n) if reorder else list(range(n))
+    order = rotation_order(src)
     start = rotation.get("pos", 0) % n
 
     # Out of credits, a group with webcams or links keeps showing them (the
@@ -261,6 +291,7 @@ async def _rotate(spec, rotation, client, session, fit, credits, photos) -> tupl
         if out is None:
             continue
         rotation["pos"] = (slot + 1) % n
+        rotation["shown"] = order[slot]  # the spec item now on the TV (dashboard entities)
         if credits is not None:
             credits.board_shown = is_board
         return out, label
@@ -276,3 +307,48 @@ async def _rotate(spec, rotation, client, session, fit, credits, photos) -> tupl
         rotation["pos"] = (start + scanned) % n
         raise SourceError(f"no usable image in this batch{suffix}")
     raise SourceError(f"no usable images ({attempts} tried){suffix}")
+
+
+async def load_item(
+    spec: SyncSpec,
+    index: int,
+    client: CloudClient,
+    session: aiohttp.ClientSession,
+    fit: Fitter,
+    photos: PhotoStore | None = None,
+) -> bytes:
+    """The fitted image of the spec's item *index* (spec order), for a preview.
+
+    The same loaders as a tick, but one item only, no retry on another item and no
+    rotation state touched. A board renders through the cloud (a credit)."""
+    src = spec.source
+    try:
+        if src.type in ("board", "custom_url"):
+            if index != 0:
+                raise SourceError(f"no item {index}")
+            if src.type == "board":
+                out = await _fit(fit, await client.board(src.board.type_id, src.board.params), None)
+                if out is None:
+                    raise SourceError("board image rejected")
+                return out
+            out = await _fit(fit, await fetch_image(session, src.custom_url), src.orientation)
+            if out is None:
+                raise SourceError("custom image does not match the orientation filter")
+            return out
+        slots = _slots(spec, client, session, photos)
+        if not 0 <= index < len(slots):
+            raise SourceError(f"no item {index}")
+        load, _label, _via_cloud, photo = slots[index]
+        if photo is not None and (photos is None or photo not in photos):
+            raise WaitingForPhone("Home Assistant doesn't have this photo from the phone yet")
+        raw = await load()
+        if raw is None:
+            raise WaitingForPhone("Home Assistant doesn't have this photo from the phone yet")
+        out = await _fit(fit, raw, src.orientation if src.type == "collection" else None)
+        if out is None:
+            raise SourceError("the image does not match the orientation filter")
+        return out
+    except _PASSTHROUGH:
+        raise
+    except CloudError as err:
+        raise SourceError(str(err)) from err

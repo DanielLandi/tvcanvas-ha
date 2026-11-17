@@ -39,6 +39,20 @@ async def test_contract_round_trip(socket_enabled, aiohttp_client, tmp_path) -> 
         json={"tv_id": "tv-1", "ok": True, "error": None, "at": "2026-10-11T10:00:00+00:00"},
     )
     assert status.status == 204
+    report = {"tv_id": "tv-1", "ok": True, "error": None, "at": "2026-10-11T10:00:00+00:00"}
+    showing = {
+        "name": "Weather Dashboard",
+        "kind": "board",
+        "index": 0,
+        "count": 1,
+        "since": "2026-10-11T10:00:00Z",
+        "paused": False,
+    }
+    for value, want in ((showing, 204), (None, 204), ({**showing, "kind": "group"}, 422)):
+        reply = await client.post(
+            "/ha/agent/status", headers=auth, json={**report, "showing": value}
+        )
+        assert reply.status == want
 
 
 async def test_fail_board_returns_configured_status(

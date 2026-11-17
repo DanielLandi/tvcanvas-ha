@@ -42,7 +42,7 @@ A fourth item kind inside `source.group.items`:
 ## 2. HA: what it does with `local` items
 
 - Bytes live in `/config/tvcanvas/images/<sha256>.jpg` (HA config dir, survives
-  restarts; it is in HA backups — the app says so).
+  restarts; it is in HA backups, and the app says so).
 - In the rotation a `local` item whose file exists is shown like any other image
   (no orientation filter, as for groups). A missing file is **skipped, never an
   error**. While any are missing and nothing else failed, the tick reports
@@ -195,7 +195,7 @@ HA implementation details the phone can rely on:
 - When the store is already at 400 files, `507` comes before the body is read.
 - A `PUT` of a photo HA already has restarts its 10-minute GC clock.
 
-### `POST /api/tvcanvas/lan/prove` (no key — HA proves it holds the key)
+### `POST /api/tvcanvas/lan/prove` (no key: HA proves it holds the key)
 
 The phone must never send its key, or any photo, to an address it hasn't
 verified. Before using an address other than the one it paired on (a Bonjour

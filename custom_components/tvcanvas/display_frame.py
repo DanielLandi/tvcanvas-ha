@@ -516,6 +516,17 @@ class FrameDisplay(FollowsTV):
             self._store.schedule_save()
         return WAITING.get(mode)
 
+    async def asleep(self) -> bool:
+        """The Frame says it is in standby. Read-only: one plain-HTTP GET of /api/v2/ at
+        the address HA last used, no WebSocket, no pairing prompt, nothing deleted."""
+        if self._finder is None:
+            return False
+        try:
+            host = await tv_address(self.address)
+        except HostRefused:
+            return False
+        return await self._finder.power_state(host) == STANDBY
+
     def release(self) -> None:
         """The spec was removed: delete HA's images in the background, best effort."""
         if not self._replace:

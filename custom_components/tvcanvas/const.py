@@ -87,6 +87,12 @@ IMAGE_VIEW_URL: Final = "/api/tvcanvas/image/{name}"
 STORE_VERSION: Final = 1
 SPEC_VERSION: Final = 1
 STATUS_ERROR_MAX: Final = 200
+# A status report sent because the TV's item or pause changed (not a tick) waits until
+# this long after the TV's last report, and several changes in that time make one report.
+SHOWING_REPORT_MIN_SECONDS: Final = 10
+# Previews (the "Preview" select): a board renders through the cloud and uses a credit.
+PREVIEW_BOARD_SECONDS: Final = 30  # at most one board preview per TV this often
+PREVIEW_OTHER_SECONDS: Final = 5  # photos, webcams, links, collection images
 
 # Photos from the phone over the LAN (docs/lan-api.md).
 LAN_API_VERSION: Final = 1

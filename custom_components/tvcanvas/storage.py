@@ -27,6 +27,7 @@ class StateStore:
             ("frame_tokens", {}),
             ("frame_uploaded", {}),
             ("cast", {}),
+            ("paused", {}),
         ):
             self._data.setdefault(key, default)
 
@@ -65,6 +66,17 @@ class StateStore:
         """A Cast TV's learned identity and, after a DHCP move, where HA followed it."""
         return self._data["cast"].setdefault(tv_id, {})
 
+    def paused(self, tv_id: str) -> bool:
+        """The TV's "Pause rotation" switch: HA keeps its current item until it is off."""
+        return bool(self._data["paused"].get(tv_id))
+
+    def set_paused(self, tv_id: str, paused: bool) -> None:
+        if paused:
+            self._data["paused"][tv_id] = True
+        else:
+            self._data["paused"].pop(tv_id, None)
+        self.schedule_save()
+
     def frame_token(self, host: str) -> str | None:
         return self._data["frame_tokens"].get(host)
 
@@ -76,6 +88,7 @@ class StateStore:
         self._data["rotation"].pop(tv_id, None)
         self._data["frame"].pop(tv_id, None)
         self._data["cast"].pop(tv_id, None)
+        self._data["paused"].pop(tv_id, None)
         self.schedule_save()
 
     def schedule_save(self) -> None:
